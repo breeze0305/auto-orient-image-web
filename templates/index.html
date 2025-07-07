@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>圖片 EXIF 移除 & 重新命名</title>
+  <!-- Bootstrap 5 CDN -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background: #f8f9fa;
+      padding-top: 60px;
+    }
+    .card {
+      max-width: 600px;
+      margin: auto;
+    }
+    #progress-container { display: none; }
+  </style>
+</head>
+<body>
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <h4 class="card-title mb-4 text-center">批次移除 EXIF & 重新命名</h4>
+      <form id="upload-form" enctype="multipart/form-data">
+        <div class="mb-3">
+          <input class="form-control" type="file" id="images" name="images" accept="image/*,.heic" multiple required>
+        </div>
+        <button type="submit" id="btn-upload" class="btn btn-primary w-100">開始處理</button>
+      </form>
+
+      <div id="progress-container" class="mt-4">
+        <label for="progress-bar" class="form-label">處理進度</label>
+        <div class="progress">
+          <div id="progress-bar" class="progress-bar" role="progressbar" style="width: 0%;">0%</div>
+        </div>
+      </div>
+
+      <div id="download-link" class="mt-4 text-center"></div>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('upload-form');
+    const progressContainer = document.getElementById('progress-container');
+    const progressBar = document.getElementById('progress-bar');
+    const downloadLinkDiv = document.getElementById('download-link');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      downloadLinkDiv.innerHTML = '';
+      const files = document.getElementById('images').files;
+      if (!files.length) return alert('請選擇至少一張圖片');
+
+      // 傳送表單
+      const fd = new FormData();
+      for (let f of files) fd.append('images', f);
+
+      document.getElementById('btn-upload').disabled = true;
+      progressContainer.style.display = 'block';
+
+      const res = await fetch('/process', { method: 'POST', body: fd });
+      const { job_id, error } = await res.json();
+      if (error) {
+        alert(error);
+        location.reload();
+        return;
+      }
+
+      // 連續詢問進度
+      const interval = setInterval(async () => {
+        const pr = await fetch(`/progress/${job_id}`);
+        const { progress } = await pr.json();
+        progressBar.style.width = progress + '%';
+        progressBar.textContent = progress + '%';
+
+        if (progress >= 100) {
+          clearInterval(interval);
+          progressBar.textContent = '完成！';
+          downloadLinkDiv.innerHTML = `
+            <a href="/download/${job_id}" class="btn btn-success">
+              下載 ZIP 檔
+            </a>
+          `;
+        }
+      }, 500);
+    });
+  </script>
+</body>
+</html>
