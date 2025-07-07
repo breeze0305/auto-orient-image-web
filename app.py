@@ -93,4 +93,4 @@ if __name__ == "__main__":
     # 指定 port 為 22000
     # app.run(host="0.0.0.0", port=22000, debug=False)
     
-    app.run(host="0.0.0.0", port=22000, debug=True)
+    app.run(host="0.0.0.0", port=22000, debug=False)
